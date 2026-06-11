@@ -8,6 +8,7 @@ Two pages:
 No database — everything lives in plain Python lists.
 """
 
+import random
 from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
@@ -21,6 +22,25 @@ app = Flask(__name__)
 todos = []
 todo_next_id = 1
 
+# ---------------------------------------------------------------------------
+# MOTIVATIONAL QUOTES
+# ---------------------------------------------------------------------------
+# random.choice() picks one of these every time the todo page loads.
+# Add or remove quotes freely — just keep the same (text, author) tuple format.
+
+QUOTES = [
+    ("The secret of getting ahead is getting started.", "Mark Twain"),
+    ("Focus on being productive instead of busy.", "Tim Ferriss"),
+    ("You don't have to be great to start, but you have to start to be great.", "Zig Ziglar"),
+    ("Small daily improvements over time lead to stunning results.", "Robin Sharma"),
+    ("Discipline is choosing between what you want now and what you want most.", "Abraham Lincoln"),
+    ("The way to get started is to quit talking and begin doing.", "Walt Disney"),
+    ("It's not about having time. It's about making time.", "Unknown"),
+    ("Done is better than perfect.", "Sheryl Sandberg"),
+    ("Your future is created by what you do today, not tomorrow.", "Robert Kiyosaki"),
+    ("Energy and persistence conquer all things.", "Benjamin Franklin"),
+]
+
 # Each note looks like: { "id": 1, "body": "Call dentist tomorrow", "color": "#ffffff" }
 # color is the hex code chosen in the palette — defaults to white.
 notes = []
@@ -33,8 +53,34 @@ note_next_id = 1
 
 @app.route("/")
 def todo_page():
-    """Show the todo list."""
-    return render_template("index.html", todos=todos, active="todo")
+    """
+    Show the todo list.
+
+    PROGRESS CALCULATION:
+      completed = number of todos where done is True
+      total     = total number of todos
+      pct       = integer percentage (0-100), safe when total is 0
+
+    RANDOM QUOTE:
+      random.choice(QUOTES) returns a different (text, author) tuple
+      on every page load or refresh.
+    """
+    completed = sum(1 for t in todos if t["done"])   # count True entries
+    total     = len(todos)
+    pct       = int((completed / total) * 100) if total > 0 else 0
+
+    quote_text, quote_author = random.choice(QUOTES)
+
+    return render_template(
+        "index.html",
+        todos=todos,
+        active="todo",
+        completed=completed,
+        total=total,
+        pct=pct,
+        quote_text=quote_text,
+        quote_author=quote_author,
+    )
 
 
 @app.route("/todo/add", methods=["POST"])

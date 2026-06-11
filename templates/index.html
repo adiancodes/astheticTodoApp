@@ -6,10 +6,75 @@
 
 <div class="max-w-2xl mx-auto px-6 py-10">
 
-  <!-- Page heading -->
-  <h1 class="text-2xl font-display font-medium text-gray-700 mb-8">My Tasks</h1>
+  <!-- ══════════════════════════════════════════════════════════════════════
+       QUOTE CARD
+       ──────────────────────────────────────────────────────────────────────
+       quote_text and quote_author come from random.choice(QUOTES) in app.py.
+       The #feefc3 tint matches the Google Keep active-sidebar accent color,
+       keeping the whole app visually consistent.
+  ═══════════════════════════════════════════════════════════════════════════ -->
+  <div class="rounded-2xl px-6 py-5 mb-8 text-center"
+       style="background-color: #feefc3;">
+    <p class="text-sm text-slate-600 italic leading-relaxed">
+      "{{ quote_text }}"
+    </p>
+    <p class="text-xs text-slate-400 font-medium mt-2 tracking-wide">
+      — {{ quote_author }}
+    </p>
+  </div>
 
-  <!-- ── ADD TASK FORM ─────────────────────────────────────────────────── -->
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       PROGRESS BAR
+       ──────────────────────────────────────────────────────────────────────
+       pct, completed, and total are calculated in app.py and passed here.
+       We only show this section if there's at least one task — otherwise
+       there's nothing to make progress on.
+
+       The bar width is set via an inline style (style="width: {{ pct }}%")
+       because Tailwind can't generate dynamic utility classes at runtime.
+  ═══════════════════════════════════════════════════════════════════════════ -->
+  {% if total > 0 %}
+  <div class="mb-8">
+
+    <!-- Text summary -->
+    <div class="flex items-center justify-between mb-2">
+      <p class="text-sm text-slate-500">
+        {% if completed == total %}
+          🎉 All {{ total }} {% if total == 1 %}task{% else %}tasks{% endif %} done — great work!
+        {% elif completed == 0 %}
+          Let's get started on your {{ total }} {% if total == 1 %}task{% else %}tasks{% endif %}.
+        {% else %}
+          You've completed
+          <span class="font-semibold text-slate-700">{{ completed }}</span>
+          of
+          <span class="font-semibold text-slate-700">{{ total }}</span>
+          {% if total == 1 %}task{% else %}tasks{% endif %} today.
+        {% endif %}
+      </p>
+      <span class="text-sm font-semibold text-slate-600">{{ pct }}%</span>
+    </div>
+
+    <!-- Progress bar track -->
+    <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+      <!--
+        The filled portion. Width is the integer percentage from the backend.
+        transition-all lets the bar animate smoothly between page reloads
+        if the browser happens to cache the page (Safari, etc.).
+      -->
+      <div
+        class="h-1.5 rounded-full transition-all duration-500"
+        style="width: {{ pct }}%; background-color: #f59e0b;"
+      ></div>
+    </div>
+
+  </div>
+  {% endif %}
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       ADD TASK FORM
+  ═══════════════════════════════════════════════════════════════════════════ -->
   <form action="/todo/add" method="POST" class="flex gap-3 mb-8">
     <input
       type="text"
@@ -18,50 +83,85 @@
       placeholder="Add a task..."
       required
       autocomplete="off"
-      class="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-800
-             placeholder-gray-400 outline-none shadow-sm
+      class="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3
+             text-sm text-slate-800 placeholder-slate-400 outline-none shadow-sm
              focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition"
     />
     <button
       type="submit"
-      class="bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-medium text-sm
-             px-5 py-3 rounded-lg shadow-sm transition"
+      class="bg-yellow-400 hover:bg-yellow-500 active:bg-yellow-600
+             text-slate-800 font-semibold text-sm
+             px-5 py-3 rounded-xl shadow-sm transition"
     >
       Add
     </button>
   </form>
 
-  <!-- ── TASK LIST ─────────────────────────────────────────────────────── -->
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       TASK LIST
+       ──────────────────────────────────────────────────────────────────────
+       We separate pending and completed tasks visually with a divider label,
+       but keep them in a single loop for simplicity.
+
+       For each task:
+         • Pending   → normal white card, gray empty circle icon
+         • Completed → muted card (opacity-60), yellow filled check, strikethrough text
+  ═══════════════════════════════════════════════════════════════════════════ -->
   {% if todos %}
+
+  <!-- Section label -->
+  <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+    Tasks
+  </p>
+
   <ul class="space-y-2">
     {% for todo in todos %}
-    <li class="flex items-center gap-3 bg-white border border-gray-200 rounded-xl
-               px-4 py-3 shadow-sm hover:shadow-md transition group">
 
-      <!-- Checkbox toggle -->
-      <form action="/todo/toggle/{{ todo.id }}" method="POST">
-        <button type="submit" class="flex-shrink-0" title="Toggle complete">
-          <span class="material-icons text-2xl
-                       {% if todo.done %}text-yellow-500{% else %}text-gray-300 group-hover:text-gray-400{% endif %}">
+    <!--
+      Completed tasks get reduced opacity so they visually "recede"
+      behind pending work — the same pattern Google Keep and Things 3 use.
+    -->
+    <li class="flex items-center gap-3 bg-white border rounded-xl
+               px-4 py-3 shadow-sm hover:shadow-md transition-shadow group
+               {% if todo.done %}opacity-55 border-gray-100{% else %}border-gray-200{% endif %}">
+
+      <!-- ── Toggle checkbox ─────────────────────────────────────────── -->
+      <form action="/todo/toggle/{{ todo.id }}" method="POST" class="flex-shrink-0">
+        <button type="submit" title="{{ 'Mark incomplete' if todo.done else 'Mark complete' }}">
+          <span class="material-icons text-[22px] transition-colors
+                       {% if todo.done %}
+                         text-yellow-500
+                       {% else %}
+                         text-gray-300 group-hover:text-gray-400
+                       {% endif %}">
             {% if todo.done %}check_circle{% else %}radio_button_unchecked{% endif %}
           </span>
         </button>
       </form>
 
-      <!-- Task text -->
-      <span class="flex-1 text-sm text-gray-700
-                   {% if todo.done %}line-through text-gray-400{% endif %}">
+      <!-- ── Task text ───────────────────────────────────────────────── -->
+      <span class="flex-1 text-sm leading-snug
+                   {% if todo.done %}
+                     line-through text-slate-400
+                   {% else %}
+                     text-slate-700
+                   {% endif %}">
         {{ todo.text }}
       </span>
 
-      <!-- Delete button -->
-      <form action="/todo/delete/{{ todo.id }}" method="POST">
+      <!-- ── Delete button (appears on hover) ───────────────────────── -->
+      <form action="/todo/delete/{{ todo.id }}" method="POST" class="flex-shrink-0">
         <button
           type="submit"
           title="Delete task"
-          class="opacity-0 group-hover:opacity-100 transition"
+          class="flex items-center justify-center w-7 h-7 rounded-full
+                 opacity-0 group-hover:opacity-100 transition
+                 hover:bg-red-50"
         >
-          <span class="material-icons text-lg text-gray-400 hover:text-red-400">close</span>
+          <span class="material-icons text-[17px] text-gray-400 hover:text-red-400">
+            delete
+          </span>
         </button>
       </form>
 
@@ -70,11 +170,15 @@
   </ul>
 
   {% else %}
-  <!-- Empty state -->
-  <div class="flex flex-col items-center justify-center text-center mt-24 select-none">
-    <span class="material-icons text-8xl text-gray-200 mb-4">check_circle</span>
-    <p class="text-gray-400 text-base">Tasks that you add appear here</p>
+
+  <!-- ── Empty state ─────────────────────────────────────────────────── -->
+  <div class="flex flex-col items-center justify-center text-center mt-20 select-none">
+    <span class="material-icons text-gray-200 mb-4" style="font-size: 80px;">
+      check_circle
+    </span>
+    <p class="text-slate-400 text-sm">Your tasks will appear here.<br/>Add one above to get started.</p>
   </div>
+
   {% endif %}
 
 </div>

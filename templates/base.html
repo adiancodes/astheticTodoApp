@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Productivity App{% endblock %}</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Roboto', 'sans-serif'],
+            display: ['"Google Sans"', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ---- Sidebar transition ---- */
+    #sidebar {
+      width: 280px;
+      transition: width 0.2s ease;
+    }
+    #sidebar.collapsed {
+      width: 72px;
+    }
+
+    /* Hide label text when collapsed */
+    #sidebar.collapsed .nav-label {
+      display: none;
+    }
+
+    /* Active nav item — Google Keep yellow pill, rounded on the right only */
+    .nav-item.active {
+      background-color: #feefc3;
+      border-radius: 0 100px 100px 0;
+    }
+
+    /* Hover state */
+    .nav-item:hover:not(.active) {
+      background-color: #e8eaed;
+      border-radius: 0 100px 100px 0;
+    }
+
+    /* Keep the main area using full viewport height */
+    body { height: 100vh; overflow: hidden; }
+    #main-content { height: 100vh; overflow-y: auto; }
+  </style>
+</head>
+
+<body class="flex bg-white font-sans text-gray-800">
+
+  <!-- =====================================================================
+       SIDEBAR
+       The sidebar shrinks to 72px when the hamburger is clicked.
+       JS at the bottom toggles the "collapsed" class.
+  ====================================================================== -->
+  <aside id="sidebar" class="flex flex-col flex-shrink-0 pt-2 select-none">
+
+    <!-- Hamburger button -->
+    <button
+      id="hamburger"
+      onclick="toggleSidebar()"
+      class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-gray-100 mx-3 mb-1"
+      title="Main menu"
+    >
+      <span class="material-icons text-gray-600">menu</span>
+    </button>
+
+    <!-- Google Keep logo area -->
+    <div class="flex items-center gap-3 px-4 pb-4 mt-1">
+      <img
+        src="https://www.gstatic.com/images/branding/product/1x/keep_2020q4_48dp.png"
+        alt="Keep logo"
+        class="w-8 h-8 flex-shrink-0"
+      />
+      <span class="nav-label text-xl font-display text-gray-700 whitespace-nowrap">Keep</span>
+    </div>
+
+    <!-- Navigation items -->
+    <nav class="flex flex-col gap-1 pr-4">
+
+      <!-- Notes link -->
+      <a
+        href="/notes"
+        class="nav-item flex items-center gap-4 px-4 py-3 cursor-pointer
+               {% if active == 'notes' %}active{% endif %}"
+      >
+        <span class="material-icons text-gray-600 flex-shrink-0">lightbulb</span>
+        <span class="nav-label text-sm font-medium text-gray-700 whitespace-nowrap">Notes</span>
+      </a>
+
+      <!-- Todo link -->
+      <a
+        href="/"
+        class="nav-item flex items-center gap-4 px-4 py-3 cursor-pointer
+               {% if active == 'todo' %}active{% endif %}"
+      >
+        <span class="material-icons text-gray-600 flex-shrink-0">check_circle</span>
+        <span class="nav-label text-sm font-medium text-gray-700 whitespace-nowrap">Todo</span>
+      </a>
+
+    </nav>
+  </aside>
+
+  <!-- =====================================================================
+       MAIN CONTENT AREA
+       Each page's content is injected here via Jinja2 block.
+  ====================================================================== -->
+  <main id="main-content" class="flex-1">
+    {% block content %}{% endblock %}
+  </main>
+
+
+  <!-- =====================================================================
+       SIDEBAR TOGGLE SCRIPT
+       Very simple: just add/remove the "collapsed" CSS class.
+  ====================================================================== -->
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+  </script>
+
+</body>
+</html>

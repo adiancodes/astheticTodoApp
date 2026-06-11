@@ -1,133 +1,102 @@
 """
-app.py — Daily Activity Tracker
---------------------------------
-A beginner-friendly Flask app that lets you log daily habits,
-mark them as complete, and get a quick progress summary.
+app.py — Multi-page Productivity App (Google Keep-inspired)
+------------------------------------------------------------
+Two pages:
+  /        → Todo list  (index.html)
+  /notes   → Notes      (keep.html)
 
-No database needed — we use a plain Python list that lives in
-memory while the server is running.
+No database — everything lives in plain Python lists.
 """
 
-import random
 from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
 
-# ---------------------------------------------------------------------------
-# DATA STORE
-# ---------------------------------------------------------------------------
-# We keep all activities in a simple Python list of dictionaries.
-# Each item looks like:  { "id": 1, "name": "Morning run", "done": False }
-# This resets every time you restart the server — perfect for a beginner demo.
-
-activities = []
-
-# A counter so every activity gets a unique ID even after deletions.
-next_id = 1
 
 # ---------------------------------------------------------------------------
-# QUOTES
+# IN-MEMORY DATA STORES
 # ---------------------------------------------------------------------------
-# A hand-picked list of short, uplifting quotes.
-# random.choice() picks one at random each time the page loads.
 
-QUOTES = [
-    ("The secret of getting ahead is getting started.", "Mark Twain"),
-    ("Small daily improvements over time lead to stunning results.", "Robin Sharma"),
-    ("You don't have to be great to start, but you have to start to be great.", "Zig Ziglar"),
-    ("Discipline is the bridge between goals and accomplishment.", "Jim Rohn"),
-    ("Act as if what you do makes a difference. It does.", "William James"),
-    ("Success is the sum of small efforts repeated day in and day out.", "Robert Collier"),
-    ("The only way to do great work is to love what you do.", "Steve Jobs"),
-    ("Believe you can and you're halfway there.", "Theodore Roosevelt"),
-    ("It always seems impossible until it's done.", "Nelson Mandela"),
-    ("Don't watch the clock; do what it does. Keep going.", "Sam Levenson"),
-]
+# Each todo looks like: { "id": 1, "text": "Buy milk", "done": False }
+todos = []
+todo_next_id = 1
+
+# Each note looks like: { "id": 1, "body": "Call dentist tomorrow" }
+notes = []
+note_next_id = 1
 
 
 # ---------------------------------------------------------------------------
-# ROUTES
+# TODO ROUTES  →  "/"
 # ---------------------------------------------------------------------------
 
 @app.route("/")
-def index():
-    """
-    Landing page.
-
-    PROGRESS CALCULATION:
-    - We count how many activities have 'done' set to True.
-    - The total is just the length of the list.
-    - We pass both numbers to the template so it can render the summary.
-
-    RANDOM QUOTE:
-    - random.choice(QUOTES) returns a random (text, author) tuple every
-      time this function runs — which is every page load or refresh.
-    """
-    completed = sum(1 for a in activities if a["done"])  # count True entries
-    total = len(activities)
-    quote_text, quote_author = random.choice(QUOTES)
-
-    return render_template(
-        "index.html",
-        activities=activities,
-        completed=completed,
-        total=total,
-        quote_text=quote_text,
-        quote_author=quote_author,
-    )
+def todo_page():
+    """Show the todo list."""
+    return render_template("index.html", todos=todos, active="todo")
 
 
-@app.route("/add", methods=["POST"])
-def add_activity():
-    """
-    Receive the form submission and append a new activity to the list.
-    We strip() the input so accidental leading/trailing spaces don't sneak in.
-    """
-    global next_id
-
-    name = request.form.get("activity_name", "").strip()
-
-    if name:  # only add if the user actually typed something
-        activities.append({
-            "id": next_id,
-            "name": name,
-            "done": False,
-        })
-        next_id += 1
-
-    return redirect(url_for("index"))
+@app.route("/todo/add", methods=["POST"])
+def add_todo():
+    """Add a new todo item."""
+    global todo_next_id
+    text = request.form.get("todo_text", "").strip()
+    if text:
+        todos.append({"id": todo_next_id, "text": text, "done": False})
+        todo_next_id += 1
+    return redirect(url_for("todo_page"))
 
 
-@app.route("/toggle/<int:activity_id>", methods=["POST"])
-def toggle_activity(activity_id):
-    """
-    Flip the 'done' flag on a single activity.
-    We search by ID so position in the list doesn't matter.
-    """
-    for activity in activities:
-        if activity["id"] == activity_id:
-            activity["done"] = not activity["done"]  # True → False, False → True
+@app.route("/todo/toggle/<int:todo_id>", methods=["POST"])
+def toggle_todo(todo_id):
+    """Flip a todo's done/undone state."""
+    for todo in todos:
+        if todo["id"] == todo_id:
+            todo["done"] = not todo["done"]
             break
+    return redirect(url_for("todo_page"))
 
-    return redirect(url_for("index"))
 
-
-@app.route("/delete/<int:activity_id>", methods=["POST"])
-def delete_activity(activity_id):
-    """
-    Remove an activity permanently from the list.
-    list() creates a new list that excludes the matching item.
-    """
-    global activities
-    activities = [a for a in activities if a["id"] != activity_id]
-    return redirect(url_for("index"))
+@app.route("/todo/delete/<int:todo_id>", methods=["POST"])
+def delete_todo(todo_id):
+    """Remove a todo from the list."""
+    global todos
+    todos = [t for t in todos if t["id"] != todo_id]
+    return redirect(url_for("todo_page"))
 
 
 # ---------------------------------------------------------------------------
-# ENTRY POINT
+# NOTES ROUTES  →  "/notes"
+# ---------------------------------------------------------------------------
+
+@app.route("/notes")
+def notes_page():
+    """Show the notes grid."""
+    return render_template("keep.html", notes=notes, active="notes")
+
+
+@app.route("/notes/add", methods=["POST"])
+def add_note():
+    """Add a new note."""
+    global note_next_id
+    body = request.form.get("note_body", "").strip()
+    if body:
+        notes.append({"id": note_next_id, "body": body})
+        note_next_id += 1
+    return redirect(url_for("notes_page"))
+
+
+@app.route("/notes/delete/<int:note_id>", methods=["POST"])
+def delete_note(note_id):
+    """Delete a note."""
+    global notes
+    notes = [n for n in notes if n["id"] != note_id]
+    return redirect(url_for("notes_page"))
+
+
+# ---------------------------------------------------------------------------
+# RUN
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    # debug=True means the server auto-reloads when you save app.py.
-    # Turn it off in production.
     app.run(debug=True)

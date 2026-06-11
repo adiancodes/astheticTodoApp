@@ -1,254 +1,82 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Daily Tracker — Stay Intentional</title>
-  <meta name="description" content="A clean, minimalist daily habit and activity tracker built with Flask." />
+{% extends "base.html" %}
 
-  <!-- Google Fonts — Inter for crisp, Apple-like typography -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+{% block title %}Todo — Productivity App{% endblock %}
 
-  <!-- Tailwind CSS via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+{% block content %}
 
-  <script>
-    // Extend Tailwind with our own design tokens so we can use
-    // colour names like 'brand' instead of generic slate/indigo.
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              50:  '#f0f4ff',
-              100: '#e0eaff',
-              500: '#6366f1',  // indigo-ish — the primary accent
-              600: '#4f46e5',
-              700: '#4338ca',
-            },
-          },
-          boxShadow: {
-            soft: '0 2px 12px rgba(0,0,0,0.06)',
-            card: '0 4px 24px rgba(0,0,0,0.08)',
-          },
-        },
-      },
-    };
-  </script>
+<div class="max-w-2xl mx-auto px-6 py-10">
 
-  <style>
-    /* Smooth fade-in for each activity card */
-    @keyframes fadeSlideUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .activity-card {
-      animation: fadeSlideUp 0.3s ease both;
-    }
+  <!-- Page heading -->
+  <h1 class="text-2xl font-display font-medium text-gray-700 mb-8">My Tasks</h1>
 
-    /* Strikethrough animation when an item is completed */
-    .line-through-animated {
-      text-decoration: line-through;
-      text-decoration-color: #6366f1;
-      opacity: 0.55;
-      transition: opacity 0.2s;
-    }
+  <!-- ── ADD TASK FORM ─────────────────────────────────────────────────── -->
+  <form action="/todo/add" method="POST" class="flex gap-3 mb-8">
+    <input
+      type="text"
+      name="todo_text"
+      id="todo_text"
+      placeholder="Add a task..."
+      required
+      autocomplete="off"
+      class="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-800
+             placeholder-gray-400 outline-none shadow-sm
+             focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition"
+    />
+    <button
+      type="submit"
+      class="bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-medium text-sm
+             px-5 py-3 rounded-lg shadow-sm transition"
+    >
+      Add
+    </button>
+  </form>
 
-    /* Progress bar fill transition */
-    #progress-fill {
-      transition: width 0.6s ease;
-    }
-  </style>
-</head>
+  <!-- ── TASK LIST ─────────────────────────────────────────────────────── -->
+  {% if todos %}
+  <ul class="space-y-2">
+    {% for todo in todos %}
+    <li class="flex items-center gap-3 bg-white border border-gray-200 rounded-xl
+               px-4 py-3 shadow-sm hover:shadow-md transition group">
 
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen antialiased">
-
-  <!-- ===== PAGE WRAPPER ===== -->
-  <div class="max-w-xl mx-auto px-4 py-12">
-
-    <!-- ===== HEADER ===== -->
-    <header class="mb-10 text-center">
-      <p class="text-xs font-semibold uppercase tracking-widest text-brand-500 mb-2">Daily Tracker</p>
-      <h1 class="text-3xl font-bold text-slate-900 leading-tight">Stay Intentional.</h1>
-      <p class="text-slate-400 text-sm mt-1">Track what matters. One day at a time.</p>
-    </header>
-
-
-    <!-- ===== QUOTE CARD =====
-         The backend picks a random quote from the QUOTES list every
-         time this page is rendered. The values are injected via
-         Jinja2 template variables: {{ quote_text }} and {{ quote_author }}.
-    -->
-    <section class="bg-white rounded-2xl shadow-card p-6 mb-8 border border-slate-100">
-      <p class="text-slate-500 text-xs font-semibold uppercase tracking-widest mb-3">✦ Today's Thought</p>
-      <blockquote class="text-slate-700 text-base font-medium leading-relaxed italic">
-        "{{ quote_text }}"
-      </blockquote>
-      <p class="text-slate-400 text-sm mt-3 font-medium">— {{ quote_author }}</p>
-    </section>
-
-
-    <!-- ===== PROGRESS SUMMARY =====
-         PROGRESS LOGIC (mirrors app.py):
-           completed  = number of activities where done == True
-           total      = total number of activities in the list
-         We use Jinja2's safe division trick (or 0 if total == 0)
-         to compute the percentage for the progress bar width.
-    -->
-    {% if total > 0 %}
-    {% set pct = ((completed / total) * 100) | int %}
-    <section class="bg-white rounded-2xl shadow-card p-6 mb-8 border border-slate-100">
-      <div class="flex items-center justify-between mb-3">
-        <p class="text-slate-600 text-sm font-medium">
-          You've completed
-          <span class="font-bold text-slate-900">{{ completed }}</span>
-          out of
-          <span class="font-bold text-slate-900">{{ total }}</span>
-          {% if total == 1 %}activity{% else %}activities{% endif %}
-          today.
-        </p>
-        <span class="text-brand-500 font-bold text-sm">{{ pct }}%</span>
-      </div>
-
-      <!-- Progress bar -->
-      <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-        <div
-          id="progress-fill"
-          class="bg-brand-500 h-2 rounded-full"
-          style="width: {{ pct }}%;"
-        ></div>
-      </div>
-
-      <!-- Cheerful message when everything is done -->
-      {% if completed == total %}
-      <p class="text-green-500 text-xs font-semibold mt-3 text-center">
-        🎉 All done! You crushed it today.
-      </p>
-      {% endif %}
-    </section>
-    {% endif %}
-
-
-    <!-- ===== ADD ACTIVITY FORM =====
-         Posts to the /add route. Flask reads 'activity_name' from
-         the form data and appends a new dict to the activities list.
-    -->
-    <section class="bg-white rounded-2xl shadow-card p-6 mb-8 border border-slate-100">
-      <p class="text-slate-500 text-xs font-semibold uppercase tracking-widest mb-4">Add an Activity</p>
-      <form action="/add" method="POST" class="flex gap-3">
-        <input
-          type="text"
-          name="activity_name"
-          id="activity_name"
-          placeholder="e.g. Morning run, Read 20 pages…"
-          required
-          autocomplete="off"
-          class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm
-                 text-slate-800 placeholder-slate-400 outline-none
-                 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
-        />
-        <button
-          type="submit"
-          class="bg-brand-500 hover:bg-brand-600 active:bg-brand-700
-                 text-white text-sm font-semibold px-5 py-2.5 rounded-xl
-                 shadow-soft transition-all duration-150"
-        >
-          Add
+      <!-- Checkbox toggle -->
+      <form action="/todo/toggle/{{ todo.id }}" method="POST">
+        <button type="submit" class="flex-shrink-0" title="Toggle complete">
+          <span class="material-icons text-2xl
+                       {% if todo.done %}text-yellow-500{% else %}text-gray-300 group-hover:text-gray-400{% endif %}">
+            {% if todo.done %}check_circle{% else %}radio_button_unchecked{% endif %}
+          </span>
         </button>
       </form>
-    </section>
 
+      <!-- Task text -->
+      <span class="flex-1 text-sm text-gray-700
+                   {% if todo.done %}line-through text-gray-400{% endif %}">
+        {{ todo.text }}
+      </span>
 
-    <!-- ===== ACTIVITY LIST =====
-         We loop over the 'activities' list passed from Flask.
-         Each activity card shows a checkbox (to toggle done state)
-         and a delete button.
-    -->
-    {% if activities %}
-    <section>
-      <p class="text-slate-500 text-xs font-semibold uppercase tracking-widest mb-4">Your Activities</p>
+      <!-- Delete button -->
+      <form action="/todo/delete/{{ todo.id }}" method="POST">
+        <button
+          type="submit"
+          title="Delete task"
+          class="opacity-0 group-hover:opacity-100 transition"
+        >
+          <span class="material-icons text-lg text-gray-400 hover:text-red-400">close</span>
+        </button>
+      </form>
 
-      <ul class="space-y-3">
-        {% for activity in activities %}
-        <li class="activity-card bg-white rounded-2xl shadow-soft border border-slate-100 px-5 py-4
-                   flex items-center justify-between gap-4">
+    </li>
+    {% endfor %}
+  </ul>
 
-          <!-- LEFT: checkbox + activity name -->
-          <div class="flex items-center gap-3 flex-1 min-w-0">
+  {% else %}
+  <!-- Empty state -->
+  <div class="flex flex-col items-center justify-center text-center mt-24 select-none">
+    <span class="material-icons text-8xl text-gray-200 mb-4">check_circle</span>
+    <p class="text-gray-400 text-base">Tasks that you add appear here</p>
+  </div>
+  {% endif %}
 
-            <!-- Toggle form — posts to /toggle/<id> -->
-            <form action="/toggle/{{ activity.id }}" method="POST">
-              <button
-                type="submit"
-                title="{{ 'Mark as incomplete' if activity.done else 'Mark as complete' }}"
-                class="w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center
-                       transition-all duration-200
-                       {% if activity.done %}
-                         bg-brand-500 border-brand-500 text-white
-                       {% else %}
-                         border-slate-300 hover:border-brand-500 text-transparent
-                       {% endif %}"
-              >
-                <!-- Simple checkmark SVG -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                     fill="currentColor" class="w-3.5 h-3.5">
-                  <path fill-rule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clip-rule="evenodd" />
-                </svg>
-              </button>
-            </form>
+</div>
 
-            <!-- Activity name — strikethrough if done -->
-            <span class="text-sm text-slate-700 font-medium truncate
-                         {% if activity.done %}line-through-animated{% endif %}">
-              {{ activity.name }}
-            </span>
-          </div>
-
-          <!-- RIGHT: delete button -->
-          <form action="/delete/{{ activity.id }}" method="POST" class="flex-shrink-0">
-            <button
-              type="submit"
-              title="Delete activity"
-              class="text-slate-300 hover:text-red-400 transition-colors duration-150 p-1 rounded-lg"
-            >
-              <!-- X icon -->
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                   fill="currentColor" class="w-4 h-4">
-                <path fill-rule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0
-                         111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10
-                         11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293
-                         5.707a1 1 0 010-1.414z"
-                      clip-rule="evenodd" />
-              </svg>
-            </button>
-          </form>
-
-        </li>
-        {% endfor %}
-      </ul>
-    </section>
-
-    {% else %}
-    <!-- Empty state — shown when no activities have been added yet -->
-    <div class="text-center py-16">
-      <p class="text-4xl mb-3">🌱</p>
-      <p class="text-slate-400 text-sm">Nothing here yet.<br/>Add your first activity above.</p>
-    </div>
-    {% endif %}
-
-
-    <!-- ===== FOOTER ===== -->
-    <footer class="mt-16 text-center">
-      <p class="text-slate-300 text-xs">Refresh the page for a new quote ✦</p>
-    </footer>
-
-  </div><!-- end .max-w-xl -->
-</body>
-</html>
+{% endblock %}

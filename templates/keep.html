@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Notes — Productivity App{% endblock %}
+
+{% block content %}
+
+<div class="px-6 py-10">
+
+  <!-- ── "TAKE A NOTE" INPUT BOX ──────────────────────────────────────── -->
+  <!--
+    This mimics Google Keep's top note input.
+    When the user clicks it, the textarea expands (JS below).
+    On submit it posts to /notes/add.
+  -->
+  <div class="max-w-xl mx-auto mb-10">
+    <form action="/notes/add" method="POST" id="note-form">
+      <div id="note-box"
+           class="bg-white rounded-xl shadow-md border border-gray-200 px-5 py-4 cursor-text">
+
+        <!-- Collapsed state: single line -->
+        <div id="note-placeholder" class="text-gray-500 text-sm" onclick="expandNote()">
+          Take a note...
+        </div>
+
+        <!-- Expanded state: textarea + button (hidden by default) -->
+        <div id="note-expanded" class="hidden flex flex-col gap-3">
+          <textarea
+            name="note_body"
+            id="note_body"
+            rows="4"
+            placeholder="Take a note..."
+            class="w-full text-sm text-gray-800 outline-none resize-none placeholder-gray-400"
+          ></textarea>
+          <div class="flex justify-end gap-2">
+            <button
+              type="button"
+              onclick="collapseNote()"
+              class="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded-lg
+                     hover:bg-gray-100 transition"
+            >
+              Close
+            </button>
+            <button
+              type="submit"
+              class="text-sm font-medium text-gray-700 px-3 py-1 rounded-lg
+                     hover:bg-gray-100 transition"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+
+  <!-- ── NOTES GRID ───────────────────────────────────────────────────── -->
+  {% if notes %}
+
+  <!--
+    We use CSS column-count for a simple masonry effect.
+    Cards appear in columns that auto-balance their height.
+  -->
+  <div style="column-count: 3; column-gap: 12px; max-width: 900px; margin: 0 auto;">
+    {% for note in notes %}
+    <div class="break-inside-avoid bg-white border border-gray-200 rounded-xl
+                shadow-sm hover:shadow-md transition p-4 mb-3 group relative">
+
+      <!-- Note body text -->
+      <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ note.body }}</p>
+
+      <!-- Delete button — visible on hover -->
+      <form action="/notes/delete/{{ note.id }}" method="POST"
+            class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+        <button type="submit" title="Delete note">
+          <span class="material-icons text-lg text-gray-400 hover:text-red-400">close</span>
+        </button>
+      </form>
+
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+
+  <!-- ── EMPTY STATE ──────────────────────────────────────────────────── -->
+  <div class="flex flex-col items-center justify-center text-center mt-28 select-none">
+    <!-- Large faded lightbulb icon, just like Google Keep -->
+    <span class="material-icons text-gray-200 mb-4" style="font-size: 120px;">lightbulb</span>
+    <p class="text-gray-400 text-base">Notes that you add appear here</p>
+  </div>
+
+  {% endif %}
+</div>
+
+
+<!-- ── NOTE BOX EXPAND / COLLAPSE SCRIPT ──────────────────────────────── -->
+<script>
+  // Show the textarea when the user clicks the placeholder text
+  function expandNote() {
+    document.getElementById('note-placeholder').classList.add('hidden');
+    document.getElementById('note-expanded').classList.remove('hidden');
+    document.getElementById('note_body').focus();
+  }
+
+  // Collapse back to the single-line placeholder
+  function collapseNote() {
+    document.getElementById('note-expanded').classList.add('hidden');
+    document.getElementById('note-placeholder').classList.remove('hidden');
+    document.getElementById('note_body').value = '';
+  }
+
+  // If a note was just submitted, keep the box in its collapsed state
+  // (the page reloads, so it resets automatically — nothing extra needed)
+</script>
+
+{% endblock %}

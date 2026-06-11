@@ -21,7 +21,8 @@ app = Flask(__name__)
 todos = []
 todo_next_id = 1
 
-# Each note looks like: { "id": 1, "body": "Call dentist tomorrow" }
+# Each note looks like: { "id": 1, "body": "Call dentist tomorrow", "color": "#ffffff" }
+# color is the hex code chosen in the palette — defaults to white.
 notes = []
 note_next_id = 1
 
@@ -77,11 +78,16 @@ def notes_page():
 
 @app.route("/notes/add", methods=["POST"])
 def add_note():
-    """Add a new note."""
+    """Add a new note (text + chosen background color)."""
     global note_next_id
     body = request.form.get("note_body", "").strip()
+
+    # The hidden input 'note_color' carries the hex value chosen in the palette.
+    # If nothing was chosen (or the field is missing), we fall back to white.
+    color = request.form.get("note_color", "#ffffff").strip() or "#ffffff"
+
     if body:
-        notes.append({"id": note_next_id, "body": body})
+        notes.append({"id": note_next_id, "body": body, "color": color})
         note_next_id += 1
     return redirect(url_for("notes_page"))
 
